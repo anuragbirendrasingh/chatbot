@@ -93,10 +93,10 @@ export async function POST(request) {
       console.log("[Chat API] Firestore save error:", dbError?.message);
     }
 
-    // If bot can't answer — save to escalations AND trigger call if phone provided
+    // If AI escalates — save to escalations (for tracking purposes)
     if (escalate && adminDb && !isDevMode) {
       try {
-        console.log("[Chat API] Escalation triggered, saving to Firestore");
+        console.log("[Chat API] AI escalation triggered, saving to Firestore");
         const escalationData = {
           sessionId: session,
           question: message,
@@ -113,38 +113,48 @@ export async function POST(request) {
 
         const escalationRef = await adminDb.collection("escalations").add(escalationData);
         console.log("[Chat API] Escalation saved with ID:", escalationRef.id);
-
-        // Trigger Twilio call if phone number is provided
-        if (phone) {
-          console.log("[Chat API] Triggering Twilio call to:", phone);
-          try {
-            // Ensure phone is in E.164 format
-            let formattedPhone = phone.trim();
-            if (!formattedPhone.startsWith("+")) {
-              formattedPhone = "+91" + formattedPhone;
-            }
-
-            const callRes = await fetch(`${process.env.VERCEL_URL || process.env.NEXT_PUBLIC_URL || ''}/api/call`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ phone: formattedPhone, name: "User" }),
-            });
-            const callData = await callRes.json();
-            console.log("[Chat API] Call response:", { 
-              ok: callRes.ok, 
-              devMode: callData.devMode, 
-              callSid: callData.callSid,
-              error: callData.error,
-            });
-          } catch (callError) {
-            console.log("[Chat API] Call trigger error:", callError?.message);
-          }
-        } else {
-          console.log("[Chat API] No phone number provided, skipping call trigger");
-        }
       } catch (dbError) {
         console.log("[Chat API] Escalation save error:", dbError?.message);
       }
+    }
+
+    // Trigger Twilio call if phone number is provided (independent of AI escalation)
+    if (phone && adminDb && !isDevMode) {
+      try {
+        console.log("[Chat API] Phone number provided, triggering Twilio call to:", phone);
+        
+        // Save phone to leads collection with timestamp
+        const leadRef = await adminDb.collection("leads").add({
+          phone,
+          sessionId: session,
+          lastMessage: message,
+          createdAt: new Date(),
+        });
+        console.log("[Chat API] Phone saved to leads collection with ID:", leadRef.id);
+
+        // Ensure phone is in E.164 format
+        let formattedPhone = phone.trim();
+        if (!formattedPhone.startsWith("+")) {
+          formattedPhone = "+91" + formattedPhone;
+        }
+
+        const callRes = await fetch(`${process.env.VERCEL_URL || process.env.NEXT_PUBLIC_URL || ''}/api/call`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: formattedPhone, name: "User" }),
+        });
+        const callData = await callRes.json();
+        console.log("[Chat API] Call response:", { 
+          ok: callRes.ok, 
+          devMode: callData.devMode, 
+          callSid: callData.callSid,
+          error: callData.error,
+        });
+      } catch (callError) {
+        console.log("[Chat API] Call trigger error:", callError?.message);
+      }
+    } else if (!phone) {
+      console.log("[Chat API] No phone number provided, skipping call trigger");
     }
 
     const duration = Date.now() - startTime;
