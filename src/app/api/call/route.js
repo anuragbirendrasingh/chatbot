@@ -30,12 +30,16 @@ export async function POST(request) {
 
     const client = twilio(accountSid, authToken);
 
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>\n<Response>\n  <Say voice="alice">Hello ${name || "there"}. ${message}</Say>\n</Response>`;
+    // Use webhook URL for TwiML callback instead of inline
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+    const domain = process.env.VERCEL_URL || 'localhost:3000';
+    const twilioUrl = `${protocol}://${domain}/api/bot-response`;
 
     await client.calls.create({
       to: phone,
       from: fromNumber,
-      twiml,
+      url: twilioUrl,
+      method: 'POST',
     });
 
     return NextResponse.json({ success: true });
