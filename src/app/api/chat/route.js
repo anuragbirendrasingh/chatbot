@@ -5,26 +5,26 @@ import { v4 as uuidv4 } from "uuid";
 
 export async function POST(request) {
   const startTime = Date.now();
-  console.log("[Chat API] ===== START =====");
-  console.log("[Chat API] Timestamp:", new Date().toISOString());
+  // console.log("[Chat API] ===== START =====");
+  // console.log("[Chat API] Timestamp:", new Date().toISOString());
   
   try {
     const { message, sessionId, chatHistory, phone } = await request.json();
-    console.log("[Chat API] Request payload:", { 
-      message, 
-      sessionId, 
-      phone: phone || "not provided",
-      chatHistoryLength: chatHistory?.length || 0,
-    });
+    // console.log("[Chat API] Request payload:", { 
+    //   message, 
+    //   sessionId, 
+    //   phone: phone || "not provided",
+    //   chatHistoryLength: chatHistory?.length || 0,
+    // });
 
     if (!message) {
-      console.log("[Chat API] ERROR: Message is required");
+      // console.log("[Chat API] ERROR: Message is required");
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
     // Use existing session or create new one
     const session = sessionId || uuidv4();
-    console.log("[Chat API] Session ID:", session);
+    // console.log("[Chat API] Session ID:", session);
 
     // Mock answers for testing/dev when AI is unavailable
     const SAMPLE_ANSWERS = {
@@ -61,7 +61,7 @@ export async function POST(request) {
     // Save conversation to Firestore
     try {
       if (adminDb) {
-        console.log("[Chat API] Saving conversation to Firestore");
+        // console.log("[Chat API] Saving conversation to Firestore");
         const conversationRef = adminDb.collection("conversations").doc(session);
         await conversationRef.set(
           {
@@ -76,16 +76,16 @@ export async function POST(request) {
           },
           { merge: true }
         );
-        console.log("[Chat API] Conversation saved successfully");
+        // console.log("[Chat API] Conversation saved successfully");
       }
     } catch (dbError) {
-      console.log("[Chat API] Firestore save error:", dbError?.message);
+      // console.log("[Chat API] Firestore save error:", dbError?.message);
     }
 
     // If AI escalates — save to escalations (for tracking purposes)
     if (escalate && adminDb) {
       try {
-        console.log("[Chat API] AI escalation triggered, saving to Firestore");
+        // console.log("[Chat API] AI escalation triggered, saving to Firestore");
         const escalationData = {
           sessionId: session,
           question: message,
@@ -97,20 +97,20 @@ export async function POST(request) {
         // Add phone number if provided
         if (phone) {
           escalationData.phone = phone;
-          console.log("[Chat API] Phone number included in escalation:", phone);
+          // console.log("[Chat API] Phone number included in escalation:", phone);
         }
 
         const escalationRef = await adminDb.collection("escalations").add(escalationData);
-        console.log("[Chat API] Escalation saved with ID:", escalationRef.id);
+        // console.log("[Chat API] Escalation saved with ID:", escalationRef.id);
       } catch (dbError) {
-        console.log("[Chat API] Escalation save error:", dbError?.message);
+        // console.log("[Chat API] Escalation save error:", dbError?.message);
       }
     }
 
     // Trigger Twilio call if phone number is provided (independent of AI escalation)
     if (phone && adminDb) {
       try {
-        console.log("[Chat API] Phone number provided, triggering Twilio call to:", phone);
+        // console.log("[Chat API] Phone number provided, triggering Twilio call to:", phone);
         
         // Save phone to leads collection with timestamp
         const leadRef = await adminDb.collection("leads").add({
@@ -119,7 +119,7 @@ export async function POST(request) {
           lastMessage: message,
           createdAt: new Date(),
         });
-        console.log("[Chat API] Phone saved to leads collection with ID:", leadRef.id);
+        // console.log("[Chat API] Phone saved to leads collection with ID:", leadRef.id);
 
         // Ensure phone is in E.164 format
         let formattedPhone = phone.trim();
@@ -127,38 +127,38 @@ export async function POST(request) {
           formattedPhone = "+91" + formattedPhone;
         }
 
-        const callRes = await fetch(`${process.env.VERCEL_URL || process.env.NEXT_PUBLIC_URL || ''}/api/call`, {
+        const callRes = await fetch(`${process.env.VERCEL_URL || process.env.NEXT_PUBLIC_URL || ''}/api/call/initiate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ phone: formattedPhone, name: "User" }),
         });
         const callData = await callRes.json();
-        console.log("[Chat API] Call response:", { 
-          ok: callRes.ok, 
-          devMode: callData.devMode, 
-          callSid: callData.callSid,
-          error: callData.error,
-        });
+        // console.log("[Chat API] Call response:", { 
+        //   ok: callRes.ok, 
+        //   devMode: callData.devMode, 
+        //   callSid: callData.callSid,
+        //   error: callData.error,
+        // });
       } catch (callError) {
-        console.log("[Chat API] Call trigger error:", callError?.message);
+        // console.log("[Chat API] Call trigger error:", callError?.message);
       }
     } else if (!phone) {
-      console.log("[Chat API] No phone number provided, skipping call trigger");
+      // console.log("[Chat API] No phone number provided, skipping call trigger");
     }
 
     const duration = Date.now() - startTime;
-    console.log("[Chat API] Response sent:", `${duration}ms`);
-    console.log("[Chat API] ===== END =====");
+    // console.log("[Chat API] Response sent:", `${duration}ms`);
+    // console.log("[Chat API] ===== END =====");
     
     return NextResponse.json({ answer, escalate, sessionId: session });
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.log("[Chat API] ERROR after", `${duration}ms`);
-    console.log("[Chat API] Error details:", {
-      message: error?.message,
-      stack: error?.stack?.substring(0, 500),
-    });
-    console.log("[Chat API] ===== END (Error) =====");
+    // console.log("[Chat API] ERROR after", `${duration}ms`);
+    // console.log("[Chat API] Error details:", {
+    //   message: error?.message,
+    //   stack: error?.stack?.substring(0, 500),
+    // });
+    // console.log("[Chat API] ===== END (Error) =====");
     
     return NextResponse.json({
       answer:

@@ -1,6 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let ai = null;
+
+// Initialize only on server side
+if (typeof window === 'undefined') {
+  ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+}
 
 // ============================================================
 // YOUR COLLEGE DATA — FILL THIS IN WITH YOUR ACTUAL INFO
@@ -101,6 +106,15 @@ A: [Your answer]
 // MAIN FUNCTION — call this from your API route
 // ============================================================
 export async function askGemini(userMessage, chatHistory = []) {
+  // Check if running on server side
+  if (typeof window !== 'undefined') {
+    throw new Error("askGemini can only be called on the server side. Use the /api/chat endpoint instead.");
+  }
+
+  if (!ai) {
+    throw new Error("GoogleGenAI not initialized. Make sure GEMINI_API_KEY is set.");
+  }
+
   try {
     // Build conversation history for context
     const contents = chatHistory.map((msg) => ({
@@ -115,7 +129,7 @@ export async function askGemini(userMessage, chatHistory = []) {
     });
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3.1-flash-lite-preview",
       contents,
       config: {
         systemInstruction: COLLEGE_SYSTEM_PROMPT,

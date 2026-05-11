@@ -41,7 +41,7 @@ export default function AuthGate({ onReady }) {
     }
 
     try {
-      const res = await fetch("/api/users/register", {
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -63,7 +63,7 @@ export default function AuthGate({ onReady }) {
       }
 
       // Trigger call — now actually check the response
-      const callRes = await fetch("/api/call", {
+      const callRes = await fetch("/api/call/initiate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: formattedPhone, name: user.displayName || "" }),

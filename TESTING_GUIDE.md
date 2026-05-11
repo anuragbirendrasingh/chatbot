@@ -93,7 +93,7 @@ git push
 3. Click on your number `+12185629357`
 4. Scroll to "Voice Configuration"
 5. Set **"A Call Comes In"** webhook:
-   - URL: `https://your-vercel-url.vercel.app/api/bot-response`
+   - URL: `https://your-vercel-url.vercel.app/api/call/twiml`
    - Method: POST
 6. Save
 

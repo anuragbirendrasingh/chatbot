@@ -1,0 +1,29 @@
+{
+  "anu@mail.com": {
+    "email": "anu@mail.com",
+    "password": "$2b$10$ukdJt.rKJDhYRtdkMGtEE.F4/MRuVrRpomGa8rmHcxljXsqGCUtVa",
+    "name": "Anurag1 Singh",
+    "phone": "8094999565",
+    "college": "HIT VIT",
+    "createdAt": "2026-05-11T07:10:52.773Z",
+    "updatedAt": "2026-05-11T07:11:20.681Z"
+  },
+  "priya@mail.com": {
+    "email": "priya@mail.com",
+    "password": "$2b$10$xtknEXZpUfV6ZrftTdvG1e0D.x.67c9HJB9hKZeEF7oIAmeNNWBm2",
+    "name": "anu",
+    "phone": "8956142532",
+    "college": "VIT",
+    "createdAt": "2026-05-11T07:35:48.536Z",
+    "updatedAt": "2026-05-11T07:35:48.536Z"
+  },
+  "pushpa@mail.com": {
+    "email": "pushpa@mail.com",
+    "password": "$2b$10$jKfZuBzG/G63i6RpQYSEn.gws.o944.u1F/WnXmAoKwELwfOGkQIi",
+    "name": "pushpa",
+    "phone": "8095487896",
+    "college": "nio",
+    "createdAt": "2026-05-11T08:52:20.200Z",
+    "updatedAt": "2026-05-11T08:52:20.200Z"
+  }
+}

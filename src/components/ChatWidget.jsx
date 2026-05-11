@@ -106,7 +106,7 @@ export default function ChatWidget({ enabled = true }) {
 
     try {
       // Step 1: Register user in Firestore
-      const regRes = await fetch("/api/users/register", {
+      const regRes = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -123,7 +123,7 @@ export default function ChatWidget({ enabled = true }) {
       }
 
       // Step 2: Trigger call via Twilio
-      const callRes = await fetch("/api/call", {
+      const callRes = await fetch("/api/call/initiate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
