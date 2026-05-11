@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 
-// Save lead (phone captured in chat)
+// Save lead (phone captured in chat) AND trigger Twilio call
 export async function POST(request) {
   const startTime = Date.now();
   console.log("[Escalate API] ===== START =====");
@@ -41,6 +41,38 @@ export async function POST(request) {
       console.log("[Escalate API] WARNING: Firebase Admin not configured, skipping lead storage");
     } else {
       console.log("[Escalate API] Dev mode - skipping lead storage");
+    }
+
+    // Trigger Twilio call immediately when lead is submitted
+    if (phone && !isDevMode) {
+      console.log("[Escalate API] Phone provided, triggering Twilio call immediately to:", phone);
+      try {
+        // Ensure phone is in E.164 format
+        let formattedPhone = phone.trim();
+        if (!formattedPhone.startsWith("+")) {
+          formattedPhone = "+91" + formattedPhone;
+        }
+
+        const baseUrl = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
+        const callRes = await fetch(`${baseUrl}/api/call`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: formattedPhone, name: name || "User" }),
+        });
+        const callData = await callRes.json();
+        console.log("[Escalate API] Call response:", { 
+          ok: callRes.ok, 
+          devMode: callData.devMode, 
+          callSid: callData.callSid,
+          error: callData.error,
+        });
+      } catch (callError) {
+        console.log("[Escalate API] Call trigger error:", callError?.message);
+      }
+    } else if (!phone) {
+      console.log("[Escalate API] No phone number provided, skipping call trigger");
+    } else {
+      console.log("[Escalate API] DEV_MODE is true, skipping call trigger");
     }
 
     const duration = Date.now() - startTime;
