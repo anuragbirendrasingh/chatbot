@@ -10,10 +10,6 @@ export async function POST(request) {
     const { phone, name } = await request.json();
     console.log("[Call API] Request payload:", { phone, name });
 
-    const isDevMode = process.env.DEV_MODE === "true";
-    const nodeEnv = process.env.NODE_ENV;
-    console.log("[Call API] Environment:", { isDevMode, nodeEnv });
-
     if (!phone) {
       console.log("[Call API] ERROR: Phone number missing");
       return NextResponse.json({ error: "Phone number is required" }, { status: 400 });
@@ -27,13 +23,6 @@ export async function POST(request) {
         { error: `Phone number must be in E.164 format (e.g. +91XXXXXXXXXX). Got: ${phone}` },
         { status: 400 }
       );
-    }
-
-    // Skip actual call only if DEV_MODE is explicitly true
-    if (isDevMode) {
-      console.log("[Call API] DEV_MODE is true - skipping actual call");
-      console.log("[Call API] ===== END (Dev Mode) =====");
-      return NextResponse.json({ success: true, devMode: true });
     }
 
     console.log("[Call API] Proceeding with Twilio call");

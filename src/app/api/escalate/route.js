@@ -8,43 +8,43 @@ export async function POST(request) {
   console.log("[Escalate API] Timestamp:", new Date().toISOString());
   
   try {
-    const { name, phone, email, courseInterest, sessionId } = await request.json();
-    console.log("[Escalate API] Request payload:", { 
-      name, 
-      phone, 
-      email, 
-      courseInterest, 
+    const {  phone,  sessionId } = await request.json();
+    console.log("[Escalate API] Request payload:", {     
+      phone,      
       sessionId,
-      hasName: !!name,
       hasPhone: !!phone,
     });
 
-    const isDevMode = process.env.DEV_MODE === "true";
-    const nodeEnv = process.env.NODE_ENV;
-    console.log("[Escalate API] Environment:", { isDevMode, nodeEnv });
-
     console.log("[Escalate API] Firebase Admin status:", { adminDbInitialized: !!adminDb });
 
-    if (adminDb && !isDevMode) {
+    if (adminDb) {
       console.log("[Escalate API] Saving lead to Firestore");
-      const docRef = await adminDb.collection("leads").add({
-        name: name || "",
-        phone,
-        email: email || "",
-        courseInterest: courseInterest || "Not specified",
-        sessionId,
-        status: "new",
-        createdAt: new Date(),
-      });
-      console.log("[Escalate API] Lead saved successfully to Firestore:", docRef.id);
-    } else if (!adminDb && !isDevMode) {
-      console.log("[Escalate API] WARNING: Firebase Admin not configured, skipping lead storage");
+      try {
+        const docRef = await adminDb.collection("leads").add({
+          // name: name || "",
+          phone,
+          // email: email || "",
+          // courseInterest: courseInterest || "Not specified",
+          sessionId,
+          status: "new",
+          createdAt: new Date(),
+        });
+        console.log("[Escalate API] Lead saved successfully to Firestore:", docRef.id);
+      } catch (firestoreError) {
+        console.log("[Escalate API] ERROR: Firestore save failed:", firestoreError?.message);
+        console.log("[Escalate API] Firestore error details:", {
+          code: firestoreError?.code,
+          message: firestoreError?.message,
+          stack: firestoreError?.stack?.substring(0, 300),
+        });
+      }
     } else {
-      console.log("[Escalate API] Dev mode - skipping lead storage");
+      console.log("[Escalate API] WARNING: Firebase Admin not configured, skipping lead storage");
+      console.log("[Escalate API] Check environment variables for Firebase Admin credentials");
     }
 
     // Trigger Twilio call immediately when lead is submitted
-    if (phone && !isDevMode) {
+    if (phone) {
       console.log("[Escalate API] Phone provided, triggering Twilio call immediately to:", phone);
       try {
         // Ensure phone is in E.164 format
@@ -57,7 +57,7 @@ export async function POST(request) {
         const callRes = await fetch(`${baseUrl}/api/call`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: formattedPhone, name: name || "User" }),
+          body: JSON.stringify({ phone: formattedPhone }),
         });
         const callData = await callRes.json();
         console.log("[Escalate API] Call response:", { 

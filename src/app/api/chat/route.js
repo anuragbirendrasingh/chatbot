@@ -45,33 +45,22 @@ export async function POST(request) {
     let answer = "";
     let escalate = false;
 
-    const isDevMode = process.env.DEV_MODE === "true";
-    const nodeEnv = process.env.NODE_ENV;
-    console.log("[Chat API] Environment:", { isDevMode, nodeEnv });
-
-    if (isDevMode) {
+    try {
+      const result = await askGemini(message, chatHistory || []);
+      answer = result.answer;
+      escalate = result.escalate;
+      console.log("[Chat API] AI response:", { escalate, answerLength: answer.length });
+    } catch (aiError) {
+      console.log("[Chat API] Gemini error:", aiError?.message);
       answer =
         SAMPLE_ANSWERS[message] ||
-        "Dev mode is enabled. Here is a sample response. Ask about Admission Process, Fee Structure, Eligibility, Courses Offered, Scholarship, or Contact Us.";
+        "Gemini not responding right now. Here is a sample response for testing. You can ask about Admission Process, Fee Structure, Eligibility, Courses Offered, Scholarship, or Contact Us.";
       escalate = false;
-    } else {
-      try {
-        const result = await askGemini(message, chatHistory || []);
-        answer = result.answer;
-        escalate = result.escalate;
-        console.log("[Chat API] AI response:", { escalate, answerLength: answer.length });
-      } catch (aiError) {
-        console.log("[Chat API] Gemini error:", aiError?.message);
-        answer =
-          SAMPLE_ANSWERS[message] ||
-          "Gemini not responding right now. Here is a sample response for testing. You can ask about Admission Process, Fee Structure, Eligibility, Courses Offered, Scholarship, or Contact Us.";
-        escalate = false;
-      }
     }
 
     // Save conversation to Firestore
     try {
-      if (adminDb && !isDevMode) {
+      if (adminDb) {
         console.log("[Chat API] Saving conversation to Firestore");
         const conversationRef = adminDb.collection("conversations").doc(session);
         await conversationRef.set(
@@ -94,7 +83,7 @@ export async function POST(request) {
     }
 
     // If AI escalates — save to escalations (for tracking purposes)
-    if (escalate && adminDb && !isDevMode) {
+    if (escalate && adminDb) {
       try {
         console.log("[Chat API] AI escalation triggered, saving to Firestore");
         const escalationData = {
@@ -119,7 +108,7 @@ export async function POST(request) {
     }
 
     // Trigger Twilio call if phone number is provided (independent of AI escalation)
-    if (phone && adminDb && !isDevMode) {
+    if (phone && adminDb) {
       try {
         console.log("[Chat API] Phone number provided, triggering Twilio call to:", phone);
         

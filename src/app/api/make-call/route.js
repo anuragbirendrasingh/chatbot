@@ -9,10 +9,6 @@ export async function POST(req) {
     const { userPhone } = await req.json();
     console.log("[Make-Call API] Request payload:", { userPhone });
 
-    const isDevMode = process.env.DEV_MODE === "true";
-    const nodeEnv = process.env.NODE_ENV;
-    console.log("[Make-Call API] Environment:", { isDevMode, nodeEnv });
-
     if (!userPhone) {
       console.log("[Make-Call API] ERROR: Phone number missing");
       return Response.json({ success: false, error: "Phone number is required" }, { status: 400 });
@@ -26,13 +22,6 @@ export async function POST(req) {
         { success: false, error: `Phone must be E.164 format (e.g. +91XXXXXXXXXX). Got: ${userPhone}` },
         { status: 400 }
       );
-    }
-
-    // Skip actual call only if DEV_MODE is explicitly true
-    if (isDevMode) {
-      console.log("[Make-Call API] DEV_MODE is true - skipping actual call");
-      console.log("[Make-Call API] ===== END (Dev Mode) =====");
-      return Response.json({ success: true, devMode: true });
     }
 
     console.log("[Make-Call API] Proceeding with Twilio call");
