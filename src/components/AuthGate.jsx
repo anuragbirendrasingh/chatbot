@@ -78,7 +78,10 @@ export default function AuthGate({ onReady }) {
         : "Registered. Our bot will call you shortly.");
       onReady?.(true);
     } catch (err) {
-      setStatus(err.message || "Registration failed. Please try again.");
+      // Show detailed error message including Twilio code if available
+      const errorMsg = err.message || "Registration failed. Please try again.";
+      const twilioCode = err.twilioCode ? ` (Error code: ${err.twilioCode})` : "";
+      setStatus(`${errorMsg}${twilioCode}`);
       console.error(err);
     } finally {
       setSubmitting(false);

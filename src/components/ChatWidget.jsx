@@ -25,7 +25,7 @@ export default function ChatWidget({ enabled = true }) {
   const [loading, setLoading] = useState(false);
   const [sessionId] = useState(() => uuidv4());
   const [showLeadForm, setShowLeadForm] = useState(false);
-  const [leadData, setLeadData] = useState({ name: "", phone: "", courseInterest: "" });
+  const [leadData, setLeadData] = useState({ phone: "" });
   const [leadSaved, setLeadSaved] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
   const [openCount, setOpenCount] = useState(0);
@@ -41,9 +41,9 @@ export default function ChatWidget({ enabled = true }) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Show lead form after 3 messages
+  // Show lead form after 2 messages
   useEffect(() => {
-    if (messageCount === 3 && !leadSaved) {
+    if (messageCount === 2 && !leadSaved) {
       setShowLeadForm(true);
     }
   }, [messageCount, leadSaved]);
@@ -148,7 +148,20 @@ export default function ChatWidget({ enabled = true }) {
 
       setShowAuthCard(false);
     } catch (err) {
-      setAuthError(err.message || "Registration failed. Please try again.");
+      // Show error in auth card
+      const errorMsg = err.message || "Registration failed. Please try again.";
+      const twilioCode = err.twilioCode ? ` (Error code: ${err.twilioCode})` : "";
+      setAuthError(`${errorMsg}${twilioCode}`);
+
+      // Also show error as bot message in chat for visibility
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          content: `❌ ${errorMsg}${twilioCode}`,
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setAuthLoading(false);
     }
@@ -207,25 +220,44 @@ export default function ChatWidget({ enabled = true }) {
   };
 
   const saveLead = async () => {
-    if (!leadData.name || !leadData.phone) return;
+    if (!leadData.phone.trim()) return;
+
+    // Ensure phone is in E.164 format
+    let phone = leadData.phone.trim();
+    if (!phone.startsWith("+")) {
+      phone = "+91" + phone;
+    }
+
     try {
-      await fetch("/api/escalate", {
+      const res = await fetch("/api/escalate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...leadData, sessionId }),
+        body: JSON.stringify({ phone, sessionId }),
       });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to save lead");
+      }
+
       setLeadSaved(true);
       setShowLeadForm(false);
       setMessages((prev) => [
         ...prev,
         {
           role: "bot",
-          content: `Thank you ${leadData.name}! 🎉 Our counsellor will call you on ${leadData.phone} shortly. Is there anything else I can help you with?`,
+          content: `Thank you! 🎉 Our counsellor will call you on ${phone} shortly. Is there anything else I can help you with?`,
           timestamp: new Date(),
         },
       ]);
-    } catch {
-      console.error("Failed to save lead");
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          content: `Sorry, failed to save your phone number. ${err.message || "Please try again."}`,
+          timestamp: new Date(),
+        },
+      ]);
     }
   };
 
@@ -304,21 +336,9 @@ export default function ChatWidget({ enabled = true }) {
                 </p>
                 <input
                   className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400"
-                  placeholder="Your name"
-                  value={leadData.name}
-                  onChange={(e) => setLeadData((d) => ({ ...d, name: e.target.value }))}
-                />
-                <input
-                  className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400"
                   placeholder="Phone number"
                   value={leadData.phone}
                   onChange={(e) => setLeadData((d) => ({ ...d, phone: e.target.value }))}
-                />
-                <input
-                  className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400"
-                  placeholder="Course you're interested in"
-                  value={leadData.courseInterest}
-                  onChange={(e) => setLeadData((d) => ({ ...d, courseInterest: e.target.value }))}
                 />
                 <div className="flex gap-2">
                   <button
