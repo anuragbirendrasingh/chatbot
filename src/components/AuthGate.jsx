@@ -34,6 +34,12 @@ export default function AuthGate({ onReady }) {
     setSubmitting(true);
     setStatus("");
 
+    // Ensure phone is in E.164 format (e.g. +91XXXXXXXXXX)
+    let formattedPhone = phone.trim();
+    if (!formattedPhone.startsWith("+")) {
+      formattedPhone = "+91" + formattedPhone; // default to India country code
+    }
+
     try {
       const res = await fetch("/api/users/register", {
         method: "POST",
@@ -43,7 +49,7 @@ export default function AuthGate({ onReady }) {
           email: user.email,
           name: user.displayName || "",
           photoURL: user.photoURL || "",
-          phone,
+          phone: formattedPhone,
         }),
       });
 
@@ -56,16 +62,23 @@ export default function AuthGate({ onReady }) {
         setStatus(data.warning);
       }
 
-      await fetch("/api/call", {
+      // Trigger call — now actually check the response
+      const callRes = await fetch("/api/call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name: user.displayName || "" }),
+        body: JSON.stringify({ phone: formattedPhone, name: user.displayName || "" }),
       });
+      const callData = await callRes.json();
+      if (!callRes.ok) {
+        throw new Error(callData?.error || "Call failed to place");
+      }
 
-      setStatus("Registered. Our bot will call you shortly.");
+      setStatus(callData.devMode
+        ? "Registered (dev mode — call was not actually placed)."
+        : "Registered. Our bot will call you shortly.");
       onReady?.(true);
     } catch (err) {
-      setStatus("Registration failed. Please try again.");
+      setStatus(err.message || "Registration failed. Please try again.");
       console.error(err);
     } finally {
       setSubmitting(false);

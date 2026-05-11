@@ -79,9 +79,14 @@ export default function ChatWidget({ enabled = true }) {
       setAuthUser(result.user);
       setShowAuthCard(true);
     } catch (error) {
-      const message = error?.code === "auth/configuration-not-found"
+      const code = error?.code;
+      const message = code === "auth/configuration-not-found"
         ? "Google sign-in is not enabled in Firebase Auth. Please enable the Google provider in Firebase Console."
-        : "Google sign-in failed. Please try again.";
+        : code === "auth/popup-closed-by-user"
+          ? "Sign-in popup was closed before completion. Please try again."
+          : code === "auth/popup-blocked"
+            ? "Browser blocked the popup. Please allow popups for this site and try again."
+            : "Google sign-in failed. Please try again.";
       setAuthError(message);
     } finally {
       setAuthLoading(false);
@@ -92,8 +97,16 @@ export default function ChatWidget({ enabled = true }) {
     if (!authUser || !authPhone.trim()) return;
     setAuthError("");
     setAuthLoading(true);
+
+    // Ensure phone is in E.164 format (e.g. +91XXXXXXXXXX)
+    let phone = authPhone.trim();
+    if (!phone.startsWith("+")) {
+      phone = "+91" + phone; // default to India country code
+    }
+
     try {
-      await fetch("/api/users/register", {
+      // Step 1: Register user in Firestore
+      const regRes = await fetch("/api/users/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -101,32 +114,41 @@ export default function ChatWidget({ enabled = true }) {
           email: authUser.email,
           name: authUser.displayName,
           photoURL: authUser.photoURL,
-          phone: authPhone.trim(),
+          phone,
         }),
       });
+      const regData = await regRes.json();
+      if (!regRes.ok) {
+        throw new Error(regData?.error || "Registration failed");
+      }
 
-      await fetch("/api/call", {
+      // Step 2: Trigger call via Twilio
+      const callRes = await fetch("/api/call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone: authPhone.trim(),
+          phone,
           name: authUser.displayName || "there",
         }),
       });
+      const callData = await callRes.json();
+      if (!callRes.ok) {
+        throw new Error(callData?.error || "Call failed to place");
+      }
+
+      // Step 3: Show success or dev-mode message
+      const botMsg = callData.devMode
+        ? "Thanks for registering! (Dev mode — call was not actually placed.)"
+        : "Thanks for registering! We have triggered a call to your number with details about our business.";
 
       setMessages((prev) => [
         ...prev,
-        {
-          role: "bot",
-          content:
-            "Thanks for registering! We have triggered a call to your number with details about our business.",
-          timestamp: new Date(),
-        },
+        { role: "bot", content: botMsg, timestamp: new Date() },
       ]);
 
       setShowAuthCard(false);
-    } catch {
-      setAuthError("Registration failed. Please try again.");
+    } catch (err) {
+      setAuthError(err.message || "Registration failed. Please try again.");
     } finally {
       setAuthLoading(false);
     }
