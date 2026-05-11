@@ -179,6 +179,9 @@ export default function ChatWidget({ enabled = true }) {
     setMessages((prev) => [...prev, userMsg]);
     setMessageCount((c) => c + 1);
 
+    // Get phone number - prioritize lead form, then auth
+    const phone = leadSaved ? leadData.phone : (authPhone || null);
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -187,6 +190,7 @@ export default function ChatWidget({ enabled = true }) {
           message: messageText,
           sessionId,
           chatHistory: messages,
+          phone, // Send phone number for call triggering
         }),
       });
 
@@ -201,8 +205,8 @@ export default function ChatWidget({ enabled = true }) {
 
       setMessages((prev) => [...prev, botMsg]);
 
-      // If escalated — show lead form immediately
-      if (data.escalate) {
+      // If escalated — show lead form immediately (if not already saved)
+      if (data.escalate && !leadSaved) {
         setShowLeadForm(true);
       }
     } catch {
