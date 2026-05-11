@@ -29,15 +29,14 @@ export async function POST(request) {
       );
     }
 
-    // Skip actual call in dev mode or when running locally (Twilio can't reach localhost)
-    const isLocal = process.env.NODE_ENV !== "production";
-    if (isDevMode || isLocal) {
-      console.log("[Call API] Dev/local mode detected - skipping actual call");
+    // Skip actual call only if DEV_MODE is explicitly true
+    if (isDevMode) {
+      console.log("[Call API] DEV_MODE is true - skipping actual call");
       console.log("[Call API] ===== END (Dev Mode) =====");
       return NextResponse.json({ success: true, devMode: true });
     }
 
-    console.log("[Call API] Production mode - proceeding with Twilio call");
+    console.log("[Call API] Proceeding with Twilio call");
 
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;

@@ -28,14 +28,14 @@ export async function POST(req) {
       );
     }
 
-    const isLocal = process.env.NODE_ENV !== "production";
-    if (isDevMode || isLocal) {
-      console.log("[Make-Call API] Dev/local mode detected - skipping actual call");
+    // Skip actual call only if DEV_MODE is explicitly true
+    if (isDevMode) {
+      console.log("[Make-Call API] DEV_MODE is true - skipping actual call");
       console.log("[Make-Call API] ===== END (Dev Mode) =====");
       return Response.json({ success: true, devMode: true });
     }
 
-    console.log("[Make-Call API] Production mode - proceeding with Twilio call");
+    console.log("[Make-Call API] Proceeding with Twilio call");
 
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
